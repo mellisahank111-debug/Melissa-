@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Venn diagram: Great Britain and US</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600&display=swap">
+<style>
+:root{--bg:#F2F5FA;--ink:#1B2233;--mute:#5B6478;--card:#fff;--line:#CBD3E2;--gb:#2F5DA8;--gbf:rgba(47,93,168,.20);--us:#C23B4A;--usf:rgba(194,59,74,.20);--ok:#1E8E5A;--bad:#C23B4A;--sel:#F2B632;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141A28;--ink:#E8ECF5;--mute:#9AA4BA;--card:#202942;--line:#38425E;--gb:#7FA6EA;--gbf:rgba(127,166,234,.22);--us:#EE7F8B;--usf:rgba(238,127,139,.22);--ok:#4FD39A;--bad:#EE7F8B}}
+:root[data-theme="dark"]{--bg:#141A28;--ink:#E8ECF5;--mute:#9AA4BA;--card:#202942;--line:#38425E;--gb:#7FA6EA;--gbf:rgba(127,166,234,.22);--us:#EE7F8B;--usf:rgba(238,127,139,.22);--ok:#4FD39A;--bad:#EE7F8B}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Sora",system-ui,sans-serif;line-height:1.5}
+main{max-width:640px;margin:0 auto;padding:20px 14px 40px}
+h1{font-size:22px;margin:0 0 6px;font-weight:600}
+.how{margin:0 0 18px;color:var(--mute);font-size:14px}
+.heads{display:grid;grid-template-columns:36% 28% 36%;text-align:center;font-weight:600;font-size:14px;margin-bottom:6px}
+.heads span:first-child{color:var(--gb)}.heads span:last-child{color:var(--us)}
+.venn{position:relative;aspect-ratio:1/.95}
+.circ{position:absolute;top:0;bottom:0;width:64%;border-radius:50%}
+.l{left:0;background:var(--gbf);border:2px solid var(--gb)}
+.r{right:0;background:var(--usf);border:2px solid var(--us)}
+.zone{position:absolute;top:9%;bottom:9%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:2px;border-radius:14px;cursor:pointer}
+.zg{left:3%;width:33%}.zb{left:36%;width:28%}.zu{right:3%;width:33%}
+.armed .zone{outline:2px dashed var(--sel);outline-offset:-2px}
+.chip{font:inherit;font-size:11.5px;line-height:1.25;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 9px;max-width:100%;text-align:center;cursor:pointer;touch-action:manipulation}
+.chip.sel{outline:3px solid var(--sel)}
+.chip.ok{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.chip.bad{border-color:var(--bad);box-shadow:inset 0 0 0 1px var(--bad);text-decoration:line-through}
+.pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:22px 0 14px;padding:14px;border:1px dashed var(--line);border-radius:14px;min-height:64px}
+.pool .chip{font-size:14px;padding:7px 13px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button.act{font:inherit;font-size:14px;font-weight:600;border-radius:10px;padding:10px 16px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+button.act.sec{background:transparent;color:var(--ink)}
+#msg{font-size:14px;color:var(--mute);flex:1;min-width:140px}
+@media (min-width:520px){.chip{font-size:13px}.pool .chip{font-size:15px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Great Britain or US?</h1>
+<p class="how">Kartani bosing, keyin diagrammadagi joyni bosing (yoki sudrab tashlang). Tap a card, then tap where it belongs.</p>
+<div class="heads"><span>Great Britain</span><span>Similarities</span><span>US</span></div>
+<div class="venn" id="venn">
+<div class="circ l"></div><div class="circ r"></div>
+<div class="zone zg" data-z="gb" aria-label="Great Britain only"></div>
+<div class="zone zb" data-z="both" aria-label="Both: similarities"></div>
+<div class="zone zu" data-z="us" aria-label="US only"></div>
+</div>
+<div class="pool" id="pool"></div>
+<div class="bar">
+<button class="act" id="check">Check answers</button>
+<button class="act sec" id="reset">Start again</button>
+<span id="msg" aria-live="polite"></span>
+</div>
+</main>
+<script>
+var CARDS=[
+["Monarch","gb"],["Prime Minister","gb"],["Drive on the left","gb"],["Colour, centre","gb"],["Bonfire Night","gb"],["Tea culture","gb"],["Pound (£)","gb"],
+["President","us"],["50 states","us"],["Drive on the right","us"],["Color, center","us"],["Independence Day","us"],["Thanksgiving","us"],["Dollar ($)","us"],
+["English language","both"],["Christmas","both"],["Easter","both"],["New Year","both"],["Famous universities","both"],["Music and film","both"]
+];
+var placed={},sel=null,checked=false,order=[];
+var pool=document.getElementById("pool"),venn=document.getElementById("venn"),msg=document.getElementById("msg");
+var zones={};
+[].forEach.call(document.querySelectorAll(".zone"),function(z){zones[z.dataset.z]=z});
+function shuffle(){order=CARDS.map(function(_,i){return i});for(var i=order.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=order[i];order[i]=order[j];order[j]=t}}
+function chip(i){
+var b=document.createElement("button");
+b.className="chip";b.textContent=CARDS[i][0];b.draggable=true;b.type="button";
+if(sel===i)b.className+=" sel";
+if(checked&&placed[i]){b.className+=placed[i]===CARDS[i][1]?" ok":" bad"}
+b.addEventListener("click",function(e){
+e.stopPropagation();
+if(placed[i]){delete placed[i];checked=false;msg.textContent="";render();return}
+sel=sel===i?null:i;render();
+});
+b.addEventListener("dragstart",function(e){sel=i;try{e.dataTransfer.setData("text/plain",String(i))}catch(x){}});
+return b;
+}
+function render(){
+pool.innerHTML="";
+for(var k in zones)zones[k].innerHTML="";
+order.forEach(function(i){
+if(placed[i]){zones[placed[i]].appendChild(chip(i))}else{pool.appendChild(chip(i))}
+});
+venn.className="venn"+(sel!==null?" armed":"");
+if(!pool.children.length){var d=document.createElement("span");d.style.color="var(--mute)";d.style.fontSize="14px";d.textContent="All cards placed. Press Check answers.";pool.appendChild(d)}
+}
+function put(z,i){if(i===null||i===undefined)return;placed[i]=z;sel=null;checked=false;msg.textContent="";render()}
+for(var k in zones){(function(z){
+zones[z].addEventListener("click",function(){put(z,sel)});
+zones[z].addEventListener("dragover",function(e){e.preventDefault()});
+zones[z].addEventListener("drop",function(e){e.preventDefault();var v=null;try{v=parseInt(e.dataTransfer.getData("text/plain"),10)}catch(x){}if(isNaN(v)||v===null)v=sel;put(z,v)});
+})(k)}
+document.getElementById("check").addEventListener("click",function(){
+var n=Object.keys(placed).length,ok=0;
+for(var i in placed){if(placed[i]===CARDS[i][1])ok++}
+checked=true;sel=null;render();
+if(n===0){msg.textContent="Place some cards first.";checked=false;return}
+var left=CARDS.length-n;
+msg.textContent=ok+" of "+n+" placed cards are correct."+(left?" "+left+" still in the pool.":ok===CARDS.length?" Perfect!":" Tap a crossed card to try again.");
+});
+document.getElementById("reset").addEventListener("click",function(){placed={};sel=null;checked=false;msg.textContent="";shuffle();render()});
+shuffle();render();
+</script>
+</body>
+</html>
